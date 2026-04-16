@@ -46,14 +46,16 @@ class Agente:
         "l": self.em_lockdown
     }
 def calcular_infeccao(agentes, beta, raio):
-    # Só infecta quem não está em lockdown
     infectados = [a for a in agentes if a.status == 1 and not a.em_lockdown]
     saudaveis = [a for a in agentes if a.status == 0 and not a.em_lockdown]
     
     for s in saudaveis:
         for i in infectados:
             dist = math.sqrt((s.x - i.x)**2 + (s.y - i.y)**2)
-            p = beta * math.exp(-dist / raio)
-            if random.random() < p:
-                s.status = 1
-                break
+            
+            if dist < 3 * raio:  # limite importante
+                p = beta * math.exp(-dist / raio)
+                
+                if random.random() < p:
+                    s.status = 1
+                    break
