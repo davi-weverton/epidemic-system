@@ -5,6 +5,8 @@ import random
 from simulation import Agente, calcular_infeccao
 from ai_engine import IA_Sentinela
 
+perc_anterior = 0
+
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode='eventlet')
 
@@ -27,7 +29,7 @@ def index():
     return render_template('index.html')
 
 def loop_simulacao():
-    global mortes_no_ciclo, agentes, contador_frames, ultima_acao
+    global mortes_no_ciclo, agentes, contador_frames, ultima_acao, perc_anterior
     while True:
         if not agentes: 
             print("Simulação encerrada: todos os agentes morreram.")
@@ -38,9 +40,11 @@ def loop_simulacao():
         perc = num_infectados / len(agentes) if agentes else 0
         
         # A IA só decide e age a cada 10 rodadas
+        delta = perc - perc_anterior
+        perc_anterior = perc
         if contador_frames % 10 == 0:
-            ultima_acao = ia.decidir_acao(perc)
-            ia.treinar(perc, mortes_no_ciclo, ultima_acao == 1)
+            ultima_acao = ia.decidir_acao(perc, delta)
+            ia.treinar(perc, delta, mortes_no_ciclo, ultima_acao == 1)
             mortes_no_ciclo = 0
 
             if ultima_acao == 1:

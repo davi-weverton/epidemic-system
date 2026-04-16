@@ -9,12 +9,14 @@ class IA_Sentinela:
         self.last_state = None
         self.last_action = None
 
-    def get_state(self, perc_infectados):
-        # Discretiza o estado em faixas de 10% para a IA aprender padrões
-        return round(perc_infectados * 10)
+    def get_state(self, perc_infectados, delta):
+        return (
+            round(perc_infectados * 10),
+            int(delta > 0),
+        )
 
-    def decidir_acao(self, perc_infectados):
-        state = self.get_state(perc_infectados)
+    def decidir_acao(self, perc_infectados, delta):
+        state = self.get_state(perc_infectados, delta)
         if state not in self.q_table:
             self.q_table[state] = [0.0, 0.0]
 
@@ -28,17 +30,17 @@ class IA_Sentinela:
         self.last_action = action
         return action
 
-    def treinar(self, novo_perc_infectados, novos_mortos, em_lockdown):
+    def treinar(self, novo_perc_infectados, delta, novos_mortos, em_lockdown):
         if self.last_state is None: return
 
-        new_state = self.get_state(novo_perc_infectados)
+        new_state = self.get_state(novo_perc_infectados, delta)
         if new_state not in self.q_table:
             self.q_table[new_state] = [0.0, 0.0]
 
         # FUNÇÃO DE RECOMPENSA CALIBRADA
         # Penalidade pesada por morte (-100)
         # Penalidade moderada por Lockdown (-30) para evitar uso excessivo
-        recompensa = -(novos_mortos * 100) - (30 if em_lockdown else 0)
+        recompensa = (- novos_mortos * 100 - (30 if em_lockdown else 0) - (novo_perc_infectados * 50))
         
         self.ultima_recompensa = recompensa
 
