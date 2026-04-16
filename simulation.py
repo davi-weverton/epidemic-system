@@ -53,7 +53,7 @@ def calcular_infeccao(agentes, beta, raio):
     for s in saudaveis:
         for i in infectados:
             dist = math.sqrt((s.x - i.x)**2 + (s.y - i.y)**2)
-            if dist < raio:
-                if random.random() < beta:
-                    s.status = 1
-                    break # Infectou, passa para o próximo saudável
+            p = beta * math.exp(-dist / raio)
+            if random.random() < p:
+                s.status = 1
+                break
