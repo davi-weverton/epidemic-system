@@ -70,3 +70,12 @@ function startSim() {
 function stopSim() {
     socket.emit('stop');
 }
+let resetIA = true;
+
+function toggleIA(btn) {
+    resetIA = !resetIA;
+
+    socket.emit('toggle_ia', { resetar: resetIA });
+
+    btn.innerText = resetIA ? "🧠 Reset IA: ON" : "🧠 Reset IA: OFF";
+}

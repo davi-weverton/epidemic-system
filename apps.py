@@ -6,6 +6,7 @@ from simulation import Agente, calcular_infeccao
 from ai_engine import IA_Sentinela
 
 rodando = False
+resetar_ia = True
 perc_anterior = 0
 
 app = Flask(__name__)
@@ -109,7 +110,10 @@ def reset_simulacao():
     ultima_acao = 0
     perc_anterior = 0
 
-    ia = IA_Sentinela()  # reseta aprendizado
+    global ia, resetar_ia
+
+    if resetar_ia:
+        ia = IA_Sentinela()
 
 @socketio.on('start')
 def start_sim():
@@ -123,6 +127,11 @@ def start_sim():
 def stop_sim():
     global rodando
     rodando = False
+
+@socketio.on('toggle_ia')
+def toggle_ia(data):
+    global resetar_ia
+    resetar_ia = data['resetar']
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
