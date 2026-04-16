@@ -79,3 +79,16 @@ function toggleIA(btn) {
 
     btn.innerText = resetIA ? "🧠 Reset IA: ON" : "🧠 Reset IA: OFF";
 }
+function treinarIA(btn) {
+    const n = document.getElementById('input-episodios').value;
+
+    btn.innerText = "⏳ Treinando...";
+    btn.disabled = true;
+
+    socket.emit('treinar', { episodios: n });
+
+    setTimeout(() => {
+        btn.innerText = "⚡ Treinar IA";
+        btn.disabled = false;
+    }, 2000);
+}

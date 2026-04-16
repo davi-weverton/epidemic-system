@@ -7,6 +7,7 @@ from ai_engine import IA_Sentinela
 
 rodando = False
 resetar_ia = True
+treinando = False
 perc_anterior = 0
 
 app = Flask(__name__)
@@ -115,6 +116,60 @@ def reset_simulacao():
     if resetar_ia:
         ia = IA_Sentinela()
 
+def rodar_episodio():
+    global agentes, mortes_no_ciclo, contador_frames, ultima_acao, perc_anterior, ia
+
+    # reset ambiente (NÃO reset IA)
+    agentes = [Agente(i, LARGURA, ALTURA) for i in range(POPULACAO_INICIAL)]
+    for i in range(45):
+        agentes[i].status = 1
+
+    mortes_no_ciclo = 0
+    contador_frames = 0
+    ultima_acao = 0
+    perc_anterior = 0
+
+    while True:
+        if not agentes:
+            break
+
+        num_infectados = sum(1 for a in agentes if a.status == 1)
+        if num_infectados == 0:
+            break  # 🔥 condição de parada correta
+
+        perc = num_infectados / len(agentes)
+
+        delta = perc - perc_anterior
+        perc_anterior = perc
+
+        if contador_frames % 10 == 0:
+            ultima_acao = ia.decidir_acao(perc, delta, ultima_acao == 1)
+            ia.treinar(perc, delta, mortes_no_ciclo, ultima_acao == 1)
+            mortes_no_ciclo = 0
+
+        calcular_infeccao(agentes, beta=0.08, raio=10)
+
+        for a in agentes[:]:
+            a.mover(LARGURA, ALTURA, 2.0)
+            estado = a.atualizar_saude(0.003, 0.98)
+
+            if estado == "morto":
+                mortes_no_ciclo += 1
+                agentes.remove(a)
+
+        contador_frames += 1
+
+def treinar_n_episodios(n):
+    global treinando
+
+    treinando = True
+
+    for _ in range(n):
+        rodar_episodio()
+
+    treinando = False
+    print(f"Treino finalizado: {n} episódios")
+    
 @socketio.on('start')
 def start_sim():
     global rodando
@@ -132,6 +187,11 @@ def stop_sim():
 def toggle_ia(data):
     global resetar_ia
     resetar_ia = data['resetar']
+
+@socketio.on('treinar')
+def treinar(data):
+    n = int(data.get('episodios', 10))
+    socketio.start_background_task(treinar_n_episodios, n)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
