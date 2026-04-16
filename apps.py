@@ -5,6 +5,7 @@ import random
 from simulation import Agente, calcular_infeccao
 from ai_engine import IA_Sentinela
 
+rodando = False
 perc_anterior = 0
 
 app = Flask(__name__)
@@ -30,7 +31,7 @@ def index():
 
 def loop_simulacao():
     global mortes_no_ciclo, agentes, contador_frames, ultima_acao, perc_anterior
-    while True:
+    while rodando:
         if not agentes: 
             print("Simulação encerrada: todos os agentes morreram.")
             break
@@ -95,9 +96,33 @@ def loop_simulacao():
         
         socketio.sleep(0.1)
 
-@socketio.on('connect')
-def start():
-    socketio.start_background_task(loop_simulacao)
+def reset_simulacao():
+    global agentes, mortes_no_ciclo, contador_frames, ultima_acao, perc_anterior, ia
+
+    agentes = [Agente(i, LARGURA, ALTURA) for i in range(POPULACAO_INICIAL)]
+
+    for i in range(45):
+        agentes[i].status = 1
+
+    mortes_no_ciclo = 0
+    contador_frames = 0
+    ultima_acao = 0
+    perc_anterior = 0
+
+    ia = IA_Sentinela()  # reseta aprendizado
+
+@socketio.on('start')
+def start_sim():
+    global rodando
+    if not rodando:
+        rodando = True
+        reset_simulacao()
+        socketio.start_background_task(loop_simulacao)
+
+@socketio.on('stop')
+def stop_sim():
+    global rodando
+    rodando = False
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

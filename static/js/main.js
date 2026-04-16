@@ -49,8 +49,10 @@ socket.on('update', (data) => {
             y = a.y;
         }
         
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        
+        let radius = 4;
+        if (a.s === 1) radius = 6;
+
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
         // Cores baseadas no status
         if (a.s === 0) ctx.fillStyle = "#2ecc71";      // Saudável
         else if (a.s === 1) ctx.fillStyle = "#e74c3c"; // Infectado
@@ -60,3 +62,11 @@ socket.on('update', (data) => {
         ctx.closePath();
     });
 });
+
+function startSim() {
+    socket.emit('start');
+}
+
+function stopSim() {
+    socket.emit('stop');
+}
