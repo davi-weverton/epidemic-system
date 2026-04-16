@@ -1,23 +1,98 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-    <title>Sentinela SIR</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinela SIR - IA Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+            min-height: 100vh;
+        }
+        .canvas-container {
+            position: relative;
+        }
+        /* Efeito de brilho opcional para quando o lockdown estiver ativo */
+        .lockdown-active {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+        }
+    </style>
 </head>
-<body class="bg-gray-900 text-white flex flex-col items-center p-8">
-    <h1 class="text-3xl font-bold mb-4 text-blue-400">Sentinela SIR - IA Adaptativa</h1>
-    <div class="flex gap-4">
-        <canvas id="sim" width="800" height="600" class="bg-black border-2 border-gray-700 rounded-lg"></canvas>
-        <div class="bg-gray-800 p-6 rounded-lg w-64">
-            <h2 class="text-xl mb-4">Status da IA</h2>
-            <p id="status" class="text-yellow-400 font-mono">ANALISANDO...</p>
-            <div class="mt-4 border-t border-gray-600 pt-4">
-                <p>🟢 Saudável</p>
-                <p>🔴 Infectado</p>
-                <p>🔵 Imune</p>
+<body class="text-white flex flex-col items-center p-6 font-sans">
+    
+    <header class="mb-8 text-center">
+        <h1 class="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 uppercase">
+            Sentinela SIR
+        </h1>
+        <p class="text-gray-500 text-sm font-mono tracking-widest mt-1">Sistemas Adaptativos & Aprendizado por Reforço</p>
+    </header>
+
+    <main class="flex flex-row gap-8 items-start justify-center max-w-7xl w-full">
+        
+        <div class="flex flex-col gap-6">
+            <div class="canvas-container">
+                <canvas id="sim" width="800" height="600" 
+                        class="bg-black border-4 border-gray-800 rounded-2xl shadow-2xl transition-all duration-500">
+                </canvas>
             </div>
+            
         </div>
-    </div>
+
+        <aside class="flex flex-col gap-6 w-80">
+            
+            <section class="bg-gray-900/80 backdrop-blur-md p-6 rounded-2xl border border-gray-800 shadow-xl">
+                <h2 class="text-sm font-bold mb-6 text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-3">Telemetria</h2>
+                
+                <div class="space-y-5">
+                    <div>
+                        <span class="text-xs text-gray-500 uppercase">População Ativa</span>
+                        <div id="stat-total" class="text-4xl font-mono font-black text-white">0</div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 pt-2">
+                        <div class="flex justify-between items-center p-2 bg-gray-800/30 rounded-lg">
+                            <span class="text-gray-400 text-sm">🟢 Saudáveis</span>
+                            <span id="stat-s" class="font-mono font-bold text-green-400 text-lg">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-gray-800/30 rounded-lg">
+                            <span class="text-gray-400 text-sm">🔴 Infectados</span>
+                            <span id="stat-i" class="font-mono font-bold text-red-500 text-lg">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-gray-800/30 rounded-lg">
+                            <span class="text-gray-400 text-sm">🔵 Imunes</span>
+                            <span id="stat-r" class="font-mono font-bold text-blue-400 text-lg">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-gray-800/30 rounded-lg">
+                            <span class="text-gray-400 text-sm">💀 Óbitos</span>
+                            <span id="stat-m" class="font-mono font-bold text-gray-500 text-lg">0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-gray-900/80 backdrop-blur-md p-6 rounded-2xl border border-gray-800 shadow-xl">
+                <div class="mb-6">
+                    <span class="text-xs text-yellow-500 font-bold uppercase tracking-widest">Estado de Quarentena</span>
+                    <div class="flex items-baseline gap-2">
+                        <span id="stat-l" class="text-4xl font-mono font-black text-yellow-500">0</span>
+                        <span class="text-gray-600 text-xs">agentes</span>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-800">
+                    <span class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-3 block">Decisão da IA</span>
+                    <div id="status" class="w-full py-3 rounded-xl font-mono font-black text-center transition-all duration-300 bg-blue-600/20 text-blue-400 border border-blue-600/30 uppercase tracking-tighter">
+                        Monitorando
+                    </div>
+                </div>
+            </section>
+
+        </aside>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="/static/js/main.js"></script>
 </body>
