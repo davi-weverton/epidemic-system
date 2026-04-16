@@ -54,7 +54,7 @@ def loop_simulacao():
                 candidatos = [a for a in agentes if not a.em_lockdown]
                 if candidatos:
                     # 10% da população por vez
-                    qtd = int(len(candidatos) * 0.10) 
+                    qtd = int(len(candidatos) * 0.20) 
                     for a in random.sample(candidatos, qtd):
                         a.em_lockdown = True
                         a.timer_lockdown = 50 
@@ -135,7 +135,9 @@ def rodar_episodio():
 
         num_infectados = sum(1 for a in agentes if a.status == 1)
         if num_infectados == 0:
-            break  # 🔥 condição de parada correta
+            ultima_acao = 0 # Força a IA a "desligar" o lockdown
+            for a in agentes:
+                a.em_lockdown = False
 
         perc = num_infectados / len(agentes)
 
@@ -169,6 +171,7 @@ def treinar_n_episodios(n):
 
     treinando = False
     print(f"Treino finalizado: {n} episódios")
+    print("ENVIANDO EVENTO")
     
 @socketio.on('start')
 def start_sim():
@@ -192,6 +195,7 @@ def toggle_ia(data):
 def treinar(data):
     n = int(data.get('episodios', 10))
     socketio.start_background_task(treinar_n_episodios, n)
+    socketio.emit('treino_finalizado')
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

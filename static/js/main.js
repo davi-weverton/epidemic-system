@@ -82,13 +82,16 @@ function toggleIA(btn) {
 function treinarIA(btn) {
     const n = document.getElementById('input-episodios').value;
 
-    btn.innerText = "⏳ Treinando...";
+    btn.innerText = `⏳ Treinando (${n})...`;
     btn.disabled = true;
 
     socket.emit('treinar', { episodios: n });
-
-    setTimeout(() => {
-        btn.innerText = "⚡ Treinar IA";
-        btn.disabled = false;
-    }, 2000);
 }
+
+// Listener global (uma vez só)
+socket.on('treino_finalizado', () => {
+    const btn = document.getElementById('btn-treinar');
+
+    btn.innerText = "⚡ Treinar IA";
+    btn.disabled = false;
+});
