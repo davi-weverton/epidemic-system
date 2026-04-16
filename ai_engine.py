@@ -9,14 +9,15 @@ class IA_Sentinela:
         self.last_state = None
         self.last_action = None
 
-    def get_state(self, perc_infectados, delta):
+    def get_state(self, perc_infectados, delta, lockdown):
         return (
             round(perc_infectados * 10),
             int(delta > 0),
+            int(lockdown)
         )
 
-    def decidir_acao(self, perc_infectados, delta):
-        state = self.get_state(perc_infectados, delta)
+    def decidir_acao(self, perc_infectados, delta, lockdown):
+        state = self.get_state(perc_infectados, delta, lockdown)
         if state not in self.q_table:
             self.q_table[state] = [0.0, 0.0]
 
@@ -33,7 +34,7 @@ class IA_Sentinela:
     def treinar(self, novo_perc_infectados, delta, novos_mortos, em_lockdown):
         if self.last_state is None: return
 
-        new_state = self.get_state(novo_perc_infectados, delta)
+        new_state = self.get_state(novo_perc_infectados, delta, em_lockdown)
         if new_state not in self.q_table:
             self.q_table[new_state] = [0.0, 0.0]
 
