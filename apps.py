@@ -43,7 +43,7 @@ def loop_simulacao():
         delta = perc - perc_anterior
         perc_anterior = perc
         if contador_frames % 10 == 0:
-            ultima_acao = ia.decidir_acao(perc, delta)
+            ultima_acao = ia.decidir_acao(perc, delta, ultima_acao == 1)
             ia.treinar(perc, delta, mortes_no_ciclo, ultima_acao == 1)
             mortes_no_ciclo = 0
 
