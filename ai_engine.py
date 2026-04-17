@@ -32,20 +32,36 @@ class IA_Sentinela:
         return action
 
     def treinar(self, novo_perc_infectados, delta, novos_mortos, em_lockdown):
-        if self.last_state is None: return
-
-        recompensa = 0
+        if self.last_state is None:
+            return
 
         new_state = self.get_state(novo_perc_infectados, delta, em_lockdown)
         if new_state not in self.q_table:
             self.q_table[new_state] = [0.0, 0.0]
 
-        # FUNÇÃO DE RECOMPENSA CALIBRADA
-        # Penalidade pesada por morte (-30)
-        # Recompensa por não estar em lookdown
-        recompensa += (- novos_mortos * 30 + (40 if not em_lockdown else 0) - (novo_perc_infectados * 20))
-        
+        recompensa = 0.0
+
+        # Penalidade por morte — o sinal mais importante
+        recompensa -= novos_mortos * 50
+
+        # Penalidade proporcional à taxa de infecção
+        recompensa -= novo_perc_infectados * 20
+
+        # Custo do lockdown — real mas menor que o custo de mortes
+        if em_lockdown:
+            recompensa -= 10
+
+        # Bônus por zerar a infecção — independente do lockdown
+        if novo_perc_infectados == 0:
+            recompensa += 100
+
         self.ultima_recompensa = recompensa
+
+        # Equação de Bellman — sem mudança
+        old_value = self.q_table[self.last_state][self.last_action]
+        next_max = max(self.q_table[new_state])
+        new_value = (1 - self.lr) * old_value + self.lr * (recompensa + self.df * next_max)
+        self.q_table[self.last_state][self.last_action] = new_value
 
         if em_lockdown:
             recompensa -= 30  # Custo do lockdown

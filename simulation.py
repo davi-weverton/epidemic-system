@@ -15,21 +15,15 @@ class Agente:
     def mover(self, x_lim, y_lim, velocidade):
         if self.em_lockdown:
             if random.random() > self.adesao:
-                # O rebelde se move, mas talvez mais devagar (velocidade * 0.5)
+                # Rebelde: se move devagar
                 self.x += random.uniform(-velocidade * 0.5, velocidade * 0.5)
                 self.y += random.uniform(-velocidade * 0.5, velocidade * 0.5)
-            else:
-                return # Obedeceu e ficou parado
+            # else: obedeceu, não faz nada
         else:
-            # Movimento normal
+            # Movimento normal — só uma vez
             self.x += random.uniform(-velocidade, velocidade)
             self.y += random.uniform(-velocidade, velocidade)
-        
-        # Movimento Browniano (Caminhada Aleatória)
-        self.x += random.uniform(-velocidade, velocidade)
-        self.y += random.uniform(-velocidade, velocidade)
 
-        # Fronteiras (Mantém dentro do plano)
         self.x = max(0, min(x_lim, self.x))
         self.y = max(0, min(y_lim, self.y))
 
