@@ -55,7 +55,7 @@
                     <input id="input-episodios" type="number" value="10" min="1"
                         class="w-20 px-2 py-1 rounded bg-gray-800 text-white border border-gray-600">
 
-                    <button onclick="treinarIA(this)" 
+                    <button id="btn-treinar" onclick="treinarIA(this)" 
                         class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-xl font-bold transition">
                         ⚡ Treinar IA
                     </button>
@@ -64,6 +64,47 @@
         </div>
 
         <aside class="flex flex-col gap-6 w-80">
+            <section class="bg-gray-900/80 backdrop-blur-md p-6 rounded-2xl border border-gray-800 shadow-xl mb-6">
+                <h2 class="text-xs font-bold mb-4 text-gray-500 uppercase tracking-widest">Configurações do Vírus</h2>
+    
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase block mb-1">População</label>
+                            <input type="number" id="pop-inicial" value="100" class="w-full bg-gray-800 border border-gray-700 rounded p-1 text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 uppercase block mb-1">Infectados</label>
+                            <input type="number" id="inf-iniciais" value="45" class="w-full bg-gray-800 border border-gray-700 rounded p-1 text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-400 flex justify-between">
+                            <span>Infectabilidade (Beta)</span>
+                            <span id="val-beta" class="font-mono text-emerald-400">0.195</span>
+                        </label>
+                        <input type="range" id="beta" min="0.01" max="0.9" step="0.01" value="0.195" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-400 flex justify-between">
+                            <span>Letalidade (Alfa)</span>
+                            <span id="val-alfa" class="font-mono text-red-400">0.0036</span>
+                        </label>
+                        <input type="range" id="alfa" min="0.0001" max="0.1" step="0.0001" value="0.0036" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-500">
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-400 flex justify-between">
+                            <span>Dificuldade de Cura (Teta)</span>
+                            <span id="val-teta" class="font-mono text-blue-400">0.99</span>
+                        </label>
+                        <input type="range" id="teta" min="0.80" max="0.999" step="0.001" value="0.99" class="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <p class="text-[9px] text-gray-600 mt-1">*Valores altos = Doença dura mais tempo.</p>
+                    </div>
+                </div>
+            </section>
             
             <section class="bg-gray-900/80 backdrop-blur-md p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <h2 class="text-sm font-bold mb-6 text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-3">Telemetria</h2>
@@ -73,6 +114,13 @@
                         <span class="text-xs text-gray-500 uppercase">População Ativa</span>
                         <div id="stat-total" class="text-4xl font-mono font-black text-white">0</div>
                     </div>
+                    <div>
+                        <span class="text-xs text-emerald-500 uppercase font-bold tracking-widest">Taxa de Sobrevivência</span>
+                        <div class="flex items-baseline gap-2">
+                        <div id="stat-sobreviventes" class="text-4xl font-mono font-black text-white">0%</div>
+                        <span class="text-gray-600 text-xs">da pop. inicial</span>
+                    </div>
+                </div>
 
                     <div class="grid grid-cols-1 gap-3 pt-2">
                         <div class="flex justify-between items-center p-2 bg-gray-800/30 rounded-lg">

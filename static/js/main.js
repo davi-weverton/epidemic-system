@@ -64,7 +64,15 @@ socket.on('update', (data) => {
 });
 
 function startSim() {
-    socket.emit('start');
+    const config = {
+        populacao: parseInt(document.getElementById('pop-inicial').value),
+        infectados: parseInt(document.getElementById('inf-iniciais').value),
+        beta: parseFloat(document.getElementById('beta').value),
+        alfa: parseFloat(document.getElementById('alfa').value),
+        teta: parseFloat(document.getElementById('teta').value) // Captura o Teta
+    };
+    
+    socket.emit('start', config);
 }
 
 function stopSim() {
@@ -83,7 +91,7 @@ function treinarIA(btn) {
     const n = document.getElementById('input-episodios').value;
 
     btn.innerText = `⏳ Treinando (${n})...`;
-    btn.disabled = true;
+    btn.disabled = true; // Desativa o botão clicado
 
     socket.emit('treinar', { episodios: n });
 }
@@ -91,7 +99,13 @@ function treinarIA(btn) {
 // Listener global (uma vez só)
 socket.on('treino_finalizado', () => {
     const btn = document.getElementById('btn-treinar');
-
-    btn.innerText = "⚡ Treinar IA";
-    btn.disabled = false;
+    if (btn) {
+        btn.innerText = "⚡ Treinar IA";
+        btn.disabled = false;
+    }
+});
+document.querySelectorAll('input[type=range]').forEach(input => {
+    input.addEventListener('input', e => {
+        document.getElementById('val-' + e.target.id).innerText = e.target.value;
+    });
 });

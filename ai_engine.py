@@ -50,12 +50,12 @@ class IA_Sentinela:
         if em_lockdown:
             recompensa -= 30  # Custo do lockdown
         else:
-            recompensa += 15  # "Bônus" por manter a economia aberta
+            recompensa += 40  # "Bônus" por manter a economia aberta
         # Bônus por manter a infecção baixa e a economia funcionando
         if novo_perc_infectados == 0 and not em_lockdown:
             recompensa += 100 
         elif novo_perc_infectados == 0 and em_lockdown:
-            recompensa -= 300 # O custo continua existindo
+            recompensa -= 3000 # O custo continua existindo
 
         # Atualização da Q-Table (Equação de Bellman)
         old_value = self.q_table[self.last_state][self.last_action]

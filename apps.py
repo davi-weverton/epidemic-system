@@ -9,6 +9,9 @@ rodando = False
 resetar_ia = True
 treinando = False
 perc_anterior = 0
+BETA_ATUAL = 0.5
+ALFA_ATUAL = 0.003
+TETA_ATUAL = 0.99
 
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode='eventlet')
@@ -32,12 +35,16 @@ def index():
     return render_template('index.html')
 
 def loop_simulacao():
-    global mortes_no_ciclo, agentes, contador_frames, ultima_acao, perc_anterior
+    global mortes_no_ciclo, agentes, contador_frames, ultima_acao, perc_anterior, ALFA_ATUAL, BETA_ATUAL, TETA_ATUAL
     while rodando:
         if not agentes: 
             print("Simulação encerrada: todos os agentes morreram.")
             break
-            
+
+        num_infectados = sum(1 for a in agentes if a.status == 1)
+        if num_infectados == 0:
+            break
+
         contador_frames += 1
         num_infectados = sum(1 for a in agentes if a.status == 1)
         perc = num_infectados / len(agentes) if agentes else 0
@@ -54,19 +61,19 @@ def loop_simulacao():
                 candidatos = [a for a in agentes if not a.em_lockdown]
                 if candidatos:
                     # 10% da população por vez
-                    qtd = int(len(candidatos) * 0.20) 
+                    qtd = int(len(candidatos) * 0.10) 
                     for a in random.sample(candidatos, qtd):
                         a.em_lockdown = True
                         a.timer_lockdown = 50 
 
         # 4. Bio-Simulação
-        calcular_infeccao(agentes, beta=0.08, raio=10)
+        calcular_infeccao(agentes, beta=BETA_ATUAL, raio=10)
         
         dados_envio = []
         for a in agentes[:]:
             a.mover(LARGURA, ALTURA, velocidade=2.0)
             
-            estado = a.atualizar_saude(alfa=0.003, teta=0.98)
+            estado = a.atualizar_saude(alfa=ALFA_ATUAL, teta=TETA_ATUAL)
             
             if estado == "morto":
                 mortes_no_ciclo += 1
@@ -153,13 +160,16 @@ def rodar_episodio():
 
         for a in agentes[:]:
             a.mover(LARGURA, ALTURA, 2.0)
-            estado = a.atualizar_saude(0.003, 0.98)
+            estado = a.atualizar_saude(0.004, 0.9999)
 
             if estado == "morto":
                 mortes_no_ciclo += 1
                 agentes.remove(a)
 
         contador_frames += 1
+
+        if num_infectados == 0:
+            break
 
 def treinar_n_episodios(n):
     global treinando
@@ -174,11 +184,23 @@ def treinar_n_episodios(n):
     print("ENVIANDO EVENTO")
     
 @socketio.on('start')
-def start_sim():
-    global rodando
+def start_sim(data=None):
+    global rodando, agentes, POPULACAO_INICIAL, BETA_ATUAL, ALFA_ATUAL, TETA_ATUAL
+    
     if not rodando:
+        if data:
+            POPULACAO_INICIAL = data.get('populacao', 100)
+            BETA_ATUAL = data.get('beta', 0.5)
+            ALFA_ATUAL = data.get('alfa', 0.003)
+            TETA_ATUAL = data.get('teta', 0.99) # Atualiza o Teta global
+            
+            # Recriar população
+            agentes = [Agente(i, LARGURA, ALTURA) for i in range(POPULACAO_INICIAL)]
+            num_init = data.get('infectados', 45)
+            for i in range(min(num_init, len(agentes))):
+                agentes[i].status = 1
+        
         rodando = True
-        reset_simulacao()
         socketio.start_background_task(loop_simulacao)
 
 @socketio.on('stop')
