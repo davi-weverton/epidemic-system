@@ -49,8 +49,10 @@ socket.on('update', (data) => {
             y = a.y;
         }
         
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        
+        let radius = 4;
+        if (a.s === 1) radius = 6;
+
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
         // Cores baseadas no status
         if (a.s === 0) ctx.fillStyle = "#2ecc71";      // Saudável
         else if (a.s === 1) ctx.fillStyle = "#e74c3c"; // Infectado
@@ -58,5 +60,113 @@ socket.on('update', (data) => {
         
         ctx.fill();
         ctx.closePath();
+        const sobreviventes = data.stats.s + data.stats.r;
+        // Usamos a população inicial definida no começo (ou enviada pelo servidor)
+        const popInicial = document.getElementById('pop-inicial').value || 100; 
+        const percSobreviventes = ((sobreviventes / popInicial) * 100).toFixed(1);
+
+        const elSobreviventes = document.getElementById('stat-sobreviventes');
+        elSobreviventes.innerText = percSobreviventes + "%";
+
+        // Efeito visual: se a taxa cair muito, o texto fica amarelo ou vermelho
+        if (percSobreviventes > 90) elSobreviventes.className = "text-4xl font-mono font-black text-emerald-400";
+        else if (percSobreviventes > 70) elSobreviventes.className = "text-4xl font-mono font-black text-yellow-500";
+        else elSobreviventes.className = "text-4xl font-mono font-black text-red-500";
     });
+});
+
+function startSim() {
+    const config = {
+        populacao: parseInt(document.getElementById('pop-inicial').value),
+        infectados: parseInt(document.getElementById('inf-iniciais').value),
+        beta: parseFloat(document.getElementById('beta').value),
+        alfa: parseFloat(document.getElementById('alfa').value),
+        teta: parseFloat(document.getElementById('teta').value) // Captura o Teta
+    };
+    
+    socket.emit('start', config);
+}
+
+function stopSim() {
+    socket.emit('stop');
+}
+let resetIA = true;
+
+function toggleIA(btn) {
+    resetIA = !resetIA;
+
+    socket.emit('toggle_ia', { resetar: resetIA });
+
+    btn.innerText = resetIA ? "🧠 Reset IA: ON" : "🧠 Reset IA: OFF";
+}
+function treinarIA(btn) {
+    const n = document.getElementById('input-episodios').value;
+
+    btn.innerText = `⏳ Treinando (${n})...`;
+    btn.disabled = true; // Desativa o botão clicado
+
+    socket.emit('treinar', { episodios: n });
+}
+
+// Listener global (uma vez só)
+socket.on('treino_finalizado', () => {
+    const btn = document.getElementById('btn-treinar');
+    if (btn) {
+        btn.innerText = "⚡ Treinar IA";
+        btn.disabled = false;
+    }
+});
+document.querySelectorAll('input[type=range]').forEach(input => {
+    input.addEventListener('input', e => {
+        document.getElementById('val-' + e.target.id).innerText = e.target.value;
+    });
+});
+// --- CONFIGURAÇÃO DO GRÁFICO DE EVOLUÇÃO ---
+const ctxEvolucao = document.getElementById('chart-evolucao').getContext('2d');
+const chartEvolucao = new Chart(ctxEvolucao, {
+    type: 'line',
+    data: {
+        labels: [], 
+        datasets: [{
+            label: 'Score da IA (Recompensa)',
+            data: [],
+            borderColor: '#a855f7',
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true,
+            pointRadius: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: { 
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: { color: '#6b7280', font: { family: 'monospace' } }
+            },
+            x: { 
+                grid: { display: false },
+                ticks: { color: '#6b7280', font: { family: 'monospace' } }
+            }
+        },
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+
+// Atualiza o gráfico em tempo real durante o treino
+socket.on('update_chart', (data) => {
+    chartEvolucao.data.labels.push(data.episodio);
+    chartEvolucao.data.datasets[0].data.push(data.score);
+    
+    // Mantém o gráfico rolando se houver muitos dados
+    if (chartEvolucao.data.labels.length > 50) {
+        // chartEvolucao.data.labels.shift(); // Opcional: remove antigos
+        // chartEvolucao.data.datasets[0].data.shift();
+    }
+    
+    chartEvolucao.update('none'); // 'none' para performance durante treino rápido
 });

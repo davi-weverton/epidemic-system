@@ -5,7 +5,13 @@ import random
 from simulation import Agente, calcular_infeccao
 from ai_engine import IA_Sentinela
 
+rodando = False
+resetar_ia = True
+treinando = False
 perc_anterior = 0
+BETA_ATUAL = 0.5
+ALFA_ATUAL = 0.003
+TETA_ATUAL = 0.99
 
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode='eventlet')
@@ -29,12 +35,16 @@ def index():
     return render_template('index.html')
 
 def loop_simulacao():
-    global mortes_no_ciclo, agentes, contador_frames, ultima_acao, perc_anterior
-    while True:
+    global mortes_no_ciclo, agentes, contador_frames, ultima_acao, perc_anterior, ALFA_ATUAL, BETA_ATUAL, TETA_ATUAL
+    while rodando:
         if not agentes: 
             print("Simulação encerrada: todos os agentes morreram.")
             break
-            
+
+        num_infectados = sum(1 for a in agentes if a.status == 1)
+        if num_infectados == 0:
+            break
+
         contador_frames += 1
         num_infectados = sum(1 for a in agentes if a.status == 1)
         perc = num_infectados / len(agentes) if agentes else 0
@@ -43,27 +53,34 @@ def loop_simulacao():
         delta = perc - perc_anterior
         perc_anterior = perc
         if contador_frames % 10 == 0:
-            ultima_acao = ia.decidir_acao(perc, delta)
+            ultima_acao = ia.decidir_acao(perc, delta, ultima_acao == 1)
             ia.treinar(perc, delta, mortes_no_ciclo, ultima_acao == 1)
             mortes_no_ciclo = 0
 
             if ultima_acao == 1:
                 candidatos = [a for a in agentes if not a.em_lockdown]
                 if candidatos:
-                    # 10% da população por vez
-                    qtd = int(len(candidatos) * 0.10) 
-                    for a in random.sample(candidatos, qtd):
-                        a.em_lockdown = True
-                        a.timer_lockdown = 50 
+                    # A IA tenta colocar 15% em lockdown
+                    qtd = int(len(candidatos) * 0.15) 
+                    selecionados = random.sample(candidatos, qtd)
+        
+                    for a in selecionados:
+                        # Só entra em lockdown se o random for menor que a adesão dele
+                        if random.random() < a.adesao:
+                            a.em_lockdown = True
+                            a.timer_lockdown = 50
+                        else:
+                            # O agente ignorou a ordem de lockdown!
+                            a.em_lockdown = False
 
         # 4. Bio-Simulação
-        calcular_infeccao(agentes, beta=0.08, raio=10)
+        calcular_infeccao(agentes, beta=BETA_ATUAL, raio=10)
         
         dados_envio = []
         for a in agentes[:]:
             a.mover(LARGURA, ALTURA, velocidade=2.0)
             
-            estado = a.atualizar_saude(alfa=0.003, teta=0.98)
+            estado = a.atualizar_saude(alfa=ALFA_ATUAL, teta=TETA_ATUAL)
             
             if estado == "morto":
                 mortes_no_ciclo += 1
@@ -95,9 +112,137 @@ def loop_simulacao():
         
         socketio.sleep(0.1)
 
-@socketio.on('connect')
-def start():
-    socketio.start_background_task(loop_simulacao)
+def reset_simulacao():
+    global agentes, mortes_no_ciclo, contador_frames, ultima_acao, perc_anterior, ia
+
+    agentes = [Agente(i, LARGURA, ALTURA) for i in range(POPULACAO_INICIAL)]
+
+    for i in range(45):
+        agentes[i].status = 1
+
+    mortes_no_ciclo = 0
+    contador_frames = 0
+    ultima_acao = 0
+    perc_anterior = 0
+
+    global ia, resetar_ia
+
+    if resetar_ia:
+        ia = IA_Sentinela()
+
+def rodar_episodio():
+    global agentes, mortes_no_ciclo, contador_frames, ultima_acao, perc_anterior, ia
+
+    # reset ambiente (NÃO reset IA)
+    agentes = [Agente(i, LARGURA, ALTURA) for i in range(POPULACAO_INICIAL)]
+    for i in range(45):
+        agentes[i].status = 1
+
+    mortes_no_ciclo = 0
+    contador_frames = 0
+    ultima_acao = 0
+    perc_anterior = 0
+
+    while True:
+        if not agentes:
+            break
+            
+        num_infectados = sum(1 for a in agentes if a.status == 1)
+        if num_infectados == 0:
+            ultima_acao = 0 # Força a IA a "desligar" o lockdown
+            for a in agentes:
+                a.em_lockdown = False
+
+        perc = num_infectados / len(agentes)
+
+        delta = perc - perc_anterior
+        perc_anterior = perc
+
+        if contador_frames % 10 == 0:
+            ultima_acao = ia.decidir_acao(perc, delta, ultima_acao == 1)
+            ia.treinar(perc, delta, mortes_no_ciclo, ultima_acao == 1)
+            mortes_no_ciclo = 0
+
+        calcular_infeccao(agentes, beta=0.08, raio=10)
+
+        for a in agentes[:]:
+            a.mover(LARGURA, ALTURA, 2.0)
+            estado = a.atualizar_saude(0.004, 0.9999)
+
+            if estado == "morto":
+                mortes_no_ciclo += 1
+                agentes.remove(a)
+
+        contador_frames += 1
+
+        if num_infectados == 0:
+            bonus_vitoria = 1000 
+            ia.ultima_recompensa = bonus_vitoria
+            recompensa_total_episodio += bonus_vitoria
+            break
+
+def treinar_n_episodios(n):
+    global treinando
+
+    treinando = True
+
+    for _ in range(n):
+        rodar_episodio()
+
+    treinando = False
+    print(f"Treino finalizado: {n} episódios")
+    print("ENVIANDO EVENTO")
+    
+@socketio.on('start')
+def start_sim(data=None):
+    global rodando, agentes, POPULACAO_INICIAL, BETA_ATUAL, ALFA_ATUAL, TETA_ATUAL
+    
+    if not rodando:
+        if data:
+            POPULACAO_INICIAL = data.get('populacao', 100)
+            BETA_ATUAL = data.get('beta', 0.5)
+            ALFA_ATUAL = data.get('alfa', 0.003)
+            TETA_ATUAL = data.get('teta', 0.99) # Atualiza o Teta global
+            
+            # Recriar população
+            agentes = [Agente(i, LARGURA, ALTURA) for i in range(POPULACAO_INICIAL)]
+            num_init = data.get('infectados', 45)
+            for i in range(min(num_init, len(agentes))):
+                agentes[i].status = 1
+        
+        rodando = True
+        socketio.start_background_task(loop_simulacao)
+
+@socketio.on('stop')
+def stop_sim():
+    global rodando
+    rodando = False
+
+@socketio.on('toggle_ia')
+def toggle_ia(data):
+    global resetar_ia
+    resetar_ia = data['resetar']
+
+@socketio.on('treinar')
+def treinar_n_episodios(data):
+    n = int(data.get('episodios', 10))
+    print(f"Iniciando treino de {n} episódios...")
+    
+    for i in range(n):
+        # A função rodar_episodio deve retornar a soma das recompensas
+        pontuacao = rodar_episodio() 
+        
+        # Envia para o gráfico
+        socketio.emit('update_chart', {
+            'episodio': i + 1, 
+            'score': pontuacao
+        })
+        
+        # Pequena pausa para não travar o websocket em treinos gigantes
+        if i % 5 == 0:
+            socketio.sleep(0.01)
+
+    socketio.emit('treino_finalizado')
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
