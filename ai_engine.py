@@ -41,9 +41,9 @@ class IA_Sentinela:
             self.q_table[new_state] = [0.0, 0.0]
 
         # FUNÇÃO DE RECOMPENSA CALIBRADA
-        # Penalidade pesada por morte (-100)
-        # Penalidade moderada por Lockdown (-30) para evitar uso excessivo
-        recompensa += (- novos_mortos * 100 - (30 if em_lockdown else 0) - (novo_perc_infectados * 50))
+        # Penalidade pesada por morte (-30)
+        # Recompensa por não estar em lookdown
+        recompensa += (- novos_mortos * 30 + (40 if not em_lockdown else 0) - (novo_perc_infectados * 20))
         
         self.ultima_recompensa = recompensa
 

@@ -10,10 +10,20 @@ class Agente:
         self.tempo_infectado = 0
         self.em_lockdown = False
         self.timer_lockdown = 0
+        self.adesao = random.uniform(0.3, 1.0)
 
     def mover(self, x_lim, y_lim, velocidade):
         if self.em_lockdown:
-            return # Agentes em quarentena não se movem
+            if random.random() > self.adesao:
+                # O rebelde se move, mas talvez mais devagar (velocidade * 0.5)
+                self.x += random.uniform(-velocidade * 0.5, velocidade * 0.5)
+                self.y += random.uniform(-velocidade * 0.5, velocidade * 0.5)
+            else:
+                return # Obedeceu e ficou parado
+        else:
+            # Movimento normal
+            self.x += random.uniform(-velocidade, velocidade)
+            self.y += random.uniform(-velocidade, velocidade)
         
         # Movimento Browniano (Caminhada Aleatória)
         self.x += random.uniform(-velocidade, velocidade)

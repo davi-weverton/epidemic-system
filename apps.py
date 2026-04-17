@@ -60,11 +60,18 @@ def loop_simulacao():
             if ultima_acao == 1:
                 candidatos = [a for a in agentes if not a.em_lockdown]
                 if candidatos:
-                    # 10% da população por vez
-                    qtd = int(len(candidatos) * 0.10) 
-                    for a in random.sample(candidatos, qtd):
-                        a.em_lockdown = True
-                        a.timer_lockdown = 50 
+                    # A IA tenta colocar 15% em lockdown
+                    qtd = int(len(candidatos) * 0.15) 
+                    selecionados = random.sample(candidatos, qtd)
+        
+                    for a in selecionados:
+                        # Só entra em lockdown se o random for menor que a adesão dele
+                        if random.random() < a.adesao:
+                            a.em_lockdown = True
+                            a.timer_lockdown = 50
+                        else:
+                            # O agente ignorou a ordem de lockdown!
+                            a.em_lockdown = False
 
         # 4. Bio-Simulação
         calcular_infeccao(agentes, beta=BETA_ATUAL, raio=10)
@@ -139,7 +146,7 @@ def rodar_episodio():
     while True:
         if not agentes:
             break
-
+            
         num_infectados = sum(1 for a in agentes if a.status == 1)
         if num_infectados == 0:
             ultima_acao = 0 # Força a IA a "desligar" o lockdown
@@ -169,6 +176,9 @@ def rodar_episodio():
         contador_frames += 1
 
         if num_infectados == 0:
+            bonus_vitoria = 1000 
+            ia.ultima_recompensa = bonus_vitoria
+            recompensa_total_episodio += bonus_vitoria
             break
 
 def treinar_n_episodios(n):
@@ -214,9 +224,24 @@ def toggle_ia(data):
     resetar_ia = data['resetar']
 
 @socketio.on('treinar')
-def treinar(data):
+def treinar_n_episodios(data):
     n = int(data.get('episodios', 10))
-    socketio.start_background_task(treinar_n_episodios, n)
+    print(f"Iniciando treino de {n} episódios...")
+    
+    for i in range(n):
+        # A função rodar_episodio deve retornar a soma das recompensas
+        pontuacao = rodar_episodio() 
+        
+        # Envia para o gráfico
+        socketio.emit('update_chart', {
+            'episodio': i + 1, 
+            'score': pontuacao
+        })
+        
+        # Pequena pausa para não travar o websocket em treinos gigantes
+        if i % 5 == 0:
+            socketio.sleep(0.01)
+
     socketio.emit('treino_finalizado')
 
 if __name__ == '__main__':
