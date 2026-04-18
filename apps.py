@@ -133,6 +133,8 @@ def reset_simulacao():
 def rodar_episodio():
     global agentes, mortes_no_ciclo, contador_frames, ultima_acao, perc_anterior, ia
 
+    score_total = 0
+
     # reset ambiente (NÃO reset IA)
     agentes = [Agente(i, LARGURA, ALTURA) for i in range(POPULACAO_INICIAL)]
     for i in range(45):
@@ -152,6 +154,7 @@ def rodar_episodio():
             ultima_acao = 0 # Força a IA a "desligar" o lockdown
             for a in agentes:
                 a.em_lockdown = False
+            break
 
         perc = num_infectados / len(agentes)
 
@@ -161,6 +164,7 @@ def rodar_episodio():
         if contador_frames % 10 == 0:
             ultima_acao = ia.decidir_acao(perc, delta, ultima_acao == 1)
             ia.treinar(perc, delta, mortes_no_ciclo, ultima_acao == 1)
+            score_total += ia.ultima_recompensa
             mortes_no_ciclo = 0
 
         calcular_infeccao(agentes, beta=0.08, raio=10)
@@ -175,11 +179,8 @@ def rodar_episodio():
 
         contador_frames += 1
 
-        if num_infectados == 0:
-            bonus_vitoria = 1000 
-            ia.ultima_recompensa = bonus_vitoria
-            recompensa_total_episodio += bonus_vitoria
-            break
+    return score_total
+
 
 def treinar_n_episodios(n):
     global treinando
@@ -188,9 +189,9 @@ def treinar_n_episodios(n):
 
     for _ in range(n):
         rodar_episodio()
+        print(f"Treino finalizado: {n} episódios")
 
     treinando = False
-    print(f"Treino finalizado: {n} episódios")
     print("ENVIANDO EVENTO")
     
 @socketio.on('start')
@@ -224,21 +225,13 @@ def toggle_ia(data):
     resetar_ia = data['resetar']
 
 @socketio.on('treinar')
-def treinar_n_episodios(data):
+def treinar_n(data):
     n = int(data.get('episodios', 10))
-    print(f"Iniciando treino de {n} episódios...")
     
     for i in range(n):
-        # A função rodar_episodio deve retornar a soma das recompensas
-        pontuacao = rodar_episodio() 
-        
-        # Envia para o gráfico
-        socketio.emit('update_chart', {
-            'episodio': i + 1, 
-            'score': pontuacao
-        })
-        
-        # Pequena pausa para não travar o websocket em treinos gigantes
+        pontuacao = rodar_episodio()  # ← sem episodio_num
+        socketio.emit('update_chart', {'episodio': i + 1, 'score': pontuacao})
+        print(f"EPISÓDIO: {i} | SCORE: {pontuacao}")
         if i % 5 == 0:
             socketio.sleep(0.01)
 
