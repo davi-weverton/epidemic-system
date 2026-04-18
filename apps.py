@@ -227,20 +227,11 @@ def toggle_ia(data):
 @socketio.on('treinar')
 def treinar_n(data):
     n = int(data.get('episodios', 10))
-    print(f"Iniciando treino de {n} episódios...")
     
     for i in range(n):
-        # A função rodar_episodio deve retornar a soma das recompensas
-        pontuacao = rodar_episodio() 
-        
-        # Envia para o gráfico
-        socketio.emit('update_chart', {
-            'episodio': i + 1, 
-            'score': pontuacao
-        })
+        pontuacao = rodar_episodio()  # ← sem episodio_num
+        socketio.emit('update_chart', {'episodio': i + 1, 'score': pontuacao})
         print(f"EPISÓDIO: {i} | SCORE: {pontuacao}")
-        
-        # Pequena pausa para não travar o websocket em treinos gigantes
         if i % 5 == 0:
             socketio.sleep(0.01)
 
